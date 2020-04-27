@@ -11,6 +11,7 @@ function Widget() {
   const [activeStep, setActiveStep] = useState(0);
   const [variables, setVariables] = useState({});
   const [response, setResponse] = useState("");
+  const [values, setValues] = useState({});
 
   const steps = [
     Step1,
@@ -31,37 +32,44 @@ function Widget() {
   }
 
   const onChangeVariable = (variableName, value) => {
-    setVariables({...variables, [variableName]: value});
+    setValues({...values, [variableName]: value});
   }
 
   useEffect(() => {
     window.TagoIO.ready();
 
     window.TagoIO.onRealtime((data) => {
-      // get the last variable from realtime
       let realtime = {};
+      let valuesRt = {};
       // var2 is a dropdown variable, the selected data is saved in var2val
       realtime["var2"] = [];
-      if (data && data.result.length) {
-        data.result.forEach(el => {
-          if (el.variable == "var2") {
-            realtime[el.variable].push(el.value);
-          } else if (realtime[el.variable] == undefined
-            || realtime[el.variable] == "") {
-            realtime[el.variable] = el.value;   
-          }
+      if (data && data.length) {
+        // const bucket = rt.data.bucket;
+        // const origin = rt.data.origin;
+
+        data.map(rt => {
+          rt.result.forEach(el => {
+            if (el.variable == "var2") {
+              realtime[el.variable].push(el.value);
+            } else if (valuesRt[el.variable] == undefined
+              || valuesRt[el.variable] == "") {
+              valuesRt[el.variable] = el.value;   
+            }
+          });
         });
       }
-      setVariables(realtime);
+      setValues(valuesRt);
+      setVariables({...variables,...realtime});
     });
   }, []);
 
   const sendData = () => {
     const arr = [];
-    Object.keys(variables).forEach(function(key) {
+
+    Object.keys(values).forEach(function(key) {
       // var2 is a dropdown variable, the selected data is saved in var2val
       if (key !== "var2") {
-        arr.push({ variable: key, value: variables[key] });
+        arr.push({ variable: key, value: values[key] });
       }
     });
     window.TagoIO.sendData(arr, 
@@ -89,7 +97,11 @@ function Widget() {
         </div>
       ) : (
         <div>
-          <ActualStep variables={variables} onChangeVariable={onChangeVariable}/>
+          <ActualStep
+            variables={variables}
+            onChangeVariable={onChangeVariable}
+            values={values}
+          />
 
           <div className="buttons">
             {(activeStep > 0) && (
